@@ -11,9 +11,19 @@
 #include <string>
 #include <math.h>
 #include "Main.h"
+#include <time.h>
 
 #define VEC_SIZE 340
 #define FEATURES_RECURSIVE_DEPTH 3
+
+clock_t start = 0, stop = 0;
+float averageFilterTime = 0;
+float sumFilterTime = 0;
+float sumFeatsManual = 0;
+float averageFeatTime = 0;
+
+IplImage *sumIntegral = NULL;
+IplImage *squaresIntegral = NULL;
 
 int quad = 0;
 double getMean(IplImage *sum, int startH, int endH, int startW, int endW) {
@@ -69,50 +79,43 @@ double getStd(IplImage *sq, int startH, int endH, int startW, int endW, double m
 	return sqrt(sum / num - mean*mean);
 }
 
-
-void estimateFeaturesManual(int startH, int endH, int startW, int endW, int step, double *answer, cv::Mat im) {
+float minlist[85];
+float maxlist[85];
+bool flagmaxminlist = false;
+void estimateFeaturesManual(int startH, int endH, int startW, int endW, int step, double *answer, cv::Mat im, IplImage *imarr) {
 	int midH = 0;
 	int midW = 0; 
+	double min = 0;
+	double max = 0;
+	if (!flagmaxminlist) {
+		flagmaxminlist = true;
+		for (int i = startH - 1; i < endH; ++i) {
+			for (int j = startW - 1; j < endW; ++j) {
+				double val = im.at<float>(i, j);
+				if (val > max) {
+					max = val;
+				}
 
-	double min = im.at<float>(startH - 1, startW - 1);
-	double max = min;
+				if (val < min) {
+					min = val;
+				}
+			}
+		}
 
-	double mean = 0;
+	}
+	
+	cv::Mat matsum = cv::Mat(sumIntegral, false);
+	cv::Mat matsquares = cv::Mat(squaresIntegral, false);
+
 	double count = 0;
-	for (int i = startH - 1; i < endH; ++i) {
-		for (int j = startW - 1; j < endW; ++j) {
-			double val = im.at<float>(i, j);
-			mean+=val;
-			count++;
-		}
-	}
+	double mean = matsum.at<double>(endH, endW) - matsum.at<double>(startH - 1, endW) - matsum.at<double>(endH, startW - 1) + matsum.at<double>(startH - 1, startW - 1);
+	mean /= (double)(endH - startH) * (endW - startW);
 
-	mean /= (double)count;
-	double std = 0;
+	double std = matsquares.at<double>(endH, endW) - matsquares.at<double>(startH - 1, endW) - matsquares.at<double>(endH, startW - 1) + matsquares.at<double>(startH - 1, startW - 1);
+	double divN = (double)(endH - startH) * (endW - startW);
+	std = pow((std / divN - mean * mean), 0.5);
 	count = 0;
-	for (int i = startH - 1; i < endH; ++i) {
-		for (int j = startW - 1; j < endW; ++j) {
-			double val = im.at<float>(i, j);
-			std += pow(val - mean, 2.0);
-			count++;
-		}
-	}
-
-	std = sqrt(std/(double)count);
-
-	for (int i = startH - 1; i < endH; ++i) {
-		for (int j = startW - 1; j < endW; ++j) {
-			double val = im.at<float>(i, j);
-			if (val > max) {
-				max = val;
-			}
-
-			if (val < min) {
-				min = val;
-			}
-		}
-	}
-
+	 
 	answer[quad * 4 + 0] = min;
 	answer[quad * 4 + 1] = max;
 	answer[quad * 4 + 2] = mean;
@@ -123,13 +126,13 @@ void estimateFeaturesManual(int startH, int endH, int startW, int endW, int step
 
 	if (step != FEATURES_RECURSIVE_DEPTH) {
 		quad++;
-		estimateFeaturesManual(startH, midH, startW, midW, step+1, answer, im);
+		estimateFeaturesManual(startH, midH, startW, midW, step+1, answer, im, imarr);
 		quad++;
-		estimateFeaturesManual(startH, midH, midW, endW, step+1, answer, im);
+		estimateFeaturesManual(startH, midH, midW, endW, step+1, answer, im, imarr);
 		quad++;
-		estimateFeaturesManual(midH, endH, startW, midW, step+1, answer, im);
+		estimateFeaturesManual(midH, endH, startW, midW, step+1, answer, im, imarr);
 		quad++;
-		estimateFeaturesManual(midH, endH, midW, endW, step+1, answer, im);
+		estimateFeaturesManual(midH, endH, midW, endW, step+1, answer, im, imarr);
 	}
 
 }
@@ -201,7 +204,17 @@ double *getFeatureVectorManual(IplImage *im) {
 	double *answer = (double *)malloc(sizeof(double) * (341) * 4);
 
 	quad = 0;
-	estimateFeaturesManual(1, 240, 1, 320, 0, answer, mat); 
+	if (sumIntegral == NULL) {
+		sumIntegral = cvCreateImage(cvSize(321, 241), IPL_DEPTH_64F, 1);
+		squaresIntegral = cvCreateImage(cvSize(321, 241), IPL_DEPTH_64F, 1);
+	}
+	cvIntegral(im, sumIntegral, squaresIntegral, NULL);
+	flagmaxminlist = false;
+	start = clock();
+	estimateFeaturesManual(1, 240, 1, 320, 0, answer, mat, im); 
+	stop = clock();
+	sumFeatsManual++;
+	averageFeatTime += (float)(stop - start) / CLOCKS_PER_SEC;
 	return answer;
 }
 
@@ -221,6 +234,7 @@ IplImage *filterImage(IplImage *conf, IplImage *depth) {
 	}
 	}
 	return img;*/
+	start = clock();
 	for (int i = 0; i < h; ++i) {   
 		for (int j = 0; j < w; ++j) {
 			int yStart = 0, yEnd = 0, xStart = 0, xEnd = 0;
@@ -252,6 +266,10 @@ IplImage *filterImage(IplImage *conf, IplImage *depth) {
 			ptr[j] = val;
 		}
 	}
+
+	stop = clock();
+	averageFilterTime += (float)(stop - start) / CLOCKS_PER_SEC;
+	sumFilterTime++;
 	return img;
 }
 
@@ -300,18 +318,18 @@ void generateFeaturesFor(int classLabel, const char *pathToFiles, int startInd, 
 		 
 			strcpy(nameDepth, pathToFiles);
 			strcpy(nameConf, pathToFiles);
-			strcat(nameDepth, "depth\\depth");
-			strcat(nameConf, "conf\\conf");
+			strcat(nameDepth, "depth\\frame");
+			strcat(nameConf, "conf\\frame");
 
 			strcpy(nameDepthPrev, pathToFiles);
 			strcpy(nameConfPrev, pathToFiles);
-			strcat(nameDepthPrev, "depth\\depth");
-			strcat(nameConfPrev, "conf\\conf");
+			strcat(nameDepthPrev, "depth\\frame");
+			strcat(nameConfPrev, "conf\\frame");
 			
 			strcpy(nameDepthPrev2, pathToFiles);
 			strcpy(nameConfPrev2, pathToFiles);
-			strcat(nameDepthPrev2, "depth\\depth");
-			strcat(nameConfPrev2, "conf\\conf");
+			strcat(nameDepthPrev2, "depth\\frame");
+			strcat(nameConfPrev2, "conf\\frame");
 
 			strcat(nameDepth, indexStr);
 			strcat(nameConf, indexStr);
@@ -330,72 +348,205 @@ void generateFeaturesFor(int classLabel, const char *pathToFiles, int startInd, 
 
 			strcat(nameDepthPrev2, ".png");
 			strcat(nameConfPrev2, ".png");
+			
+			IplImage *imDepth = cvLoadImage(nameDepth, CV_LOAD_IMAGE_ANYDEPTH );
+			IplImage *imConf = cvLoadImage(nameConf, CV_LOAD_IMAGE_ANYDEPTH );
+			IplImage *filtered = filterImage(imConf, imDepth);
+			
 
-		IplImage *imDepth = cvLoadImage(nameDepth, CV_LOAD_IMAGE_ANYDEPTH );
-		IplImage *imConf = cvLoadImage(nameConf, CV_LOAD_IMAGE_ANYDEPTH );
-		IplImage *filtered = filterImage(imConf, imDepth);
+			IplImage *imDepthPrev = cvLoadImage(nameDepthPrev, CV_LOAD_IMAGE_ANYDEPTH);
+			IplImage *imConfPrev = cvLoadImage(nameConfPrev, CV_LOAD_IMAGE_ANYDEPTH);
+			IplImage *filteredPrev = filterImage(imConfPrev, imDepthPrev);
 
-		IplImage *imDepthPrev = cvLoadImage(nameDepthPrev, CV_LOAD_IMAGE_ANYDEPTH);
-		IplImage *imConfPrev = cvLoadImage(nameConfPrev, CV_LOAD_IMAGE_ANYDEPTH);
-		IplImage *filteredPrev = filterImage(imConfPrev, imDepthPrev);
+			IplImage *imDepthPrev2 = cvLoadImage(nameDepthPrev2, CV_LOAD_IMAGE_ANYDEPTH);
+			IplImage *imConfPrev2 = cvLoadImage(nameConfPrev2, CV_LOAD_IMAGE_ANYDEPTH);
+			IplImage *filteredPrev2 = filterImage(imConfPrev2, imDepthPrev2);
 
-		IplImage *imDepthPrev2 = cvLoadImage(nameDepthPrev2, CV_LOAD_IMAGE_ANYDEPTH);
-		IplImage *imConfPrev2 = cvLoadImage(nameConfPrev2, CV_LOAD_IMAGE_ANYDEPTH);
-		IplImage *filteredPrev2 = filterImage(imConfPrev2, imDepthPrev2);
+			double * feature = getFeatureVectorManual(filtered);
 
-		double * feature = getFeatureVectorManual(filtered);
+			IplImage *subtracted = cvCloneImage(filtered);
+			cvZero(subtracted);
+			IplImage *subtracted2 = cvCloneImage(filtered);
+			cvZero(subtracted2);
 
-		IplImage *subtracted = cvCloneImage(filtered);
-		cvZero(subtracted);
-		IplImage *subtracted2 = cvCloneImage(filtered);
-		cvZero(subtracted2);
+			// 10 - 5
+			cvSub(filtered, filteredPrev, subtracted);
+			// 5 - 1
+			cvSub(filteredPrev, filteredPrev2, subtracted2);
 
-		// 10 - 5
-		cvSub(filtered, filteredPrev, subtracted);
-		// 5 - 1
-		cvSub(filteredPrev, filteredPrev2, subtracted2);
+			double *featuresPrev = getFeatureVectorManual(subtracted);
+			double *featuresPrev2 = getFeatureVectorManual(subtracted2);
 
-		double *featuresPrev = getFeatureVectorManual(subtracted);
-		double *featuresPrev2 = getFeatureVectorManual(subtracted2);
+			/*normalizeFeatures(feature);
+			normalizeFeatures(featuresPrev);*/
 
-		/*normalizeFeatures(feature);
-		normalizeFeatures(featuresPrev);*/
+			cvReleaseImage(&imDepth);
+			cvReleaseImage(&imConf);
+			cvReleaseImage(&filtered);
+			cvReleaseImage(&imDepthPrev);
+			cvReleaseImage(&imConfPrev);
+			cvReleaseImage(&filteredPrev);
+			cvReleaseImage(&imDepthPrev2);
+			cvReleaseImage(&imConfPrev2);
+			cvReleaseImage(&filteredPrev2);
+			cvReleaseImage(&subtracted);
+			cvReleaseImage(&subtracted2);
 
-		cvReleaseImage(&imDepth);
-		cvReleaseImage(&imConf);
-		cvReleaseImage(&filtered);
-		cvReleaseImage(&imDepthPrev);
-		cvReleaseImage(&imConfPrev);
-		cvReleaseImage(&filteredPrev);
-		cvReleaseImage(&imDepthPrev2);
-		cvReleaseImage(&imConfPrev2);
-		cvReleaseImage(&filteredPrev2);
-		cvReleaseImage(&subtracted);
-		cvReleaseImage(&subtracted2);
+			int labelNum = classLabel;
+			if (classLabel >= 6) {
+				labelNum = 2;
+			}
+			fprintf(file, "%d\t", labelNum);
+			for (int i = 0; i < VEC_SIZE; ++i) {
+				fprintf(file, "%f\t", feature[i]);
+			}
 
-		int labelNum = classLabel;
-		if (classLabel >= 6) {
-			labelNum = 2;
-		}
-		fprintf(file, "%d\t", labelNum);
-		for (int i = 0; i < VEC_SIZE; ++i) {
-			fprintf(file, "%f\t", feature[i]);
-		}
+			for (int i = 0; i < VEC_SIZE; ++i) {
+				fprintf(file, "%f\t", featuresPrev[i]);
+			}
 
-		for (int i = 0; i < VEC_SIZE; ++i) {
-			fprintf(file, "%f\t", featuresPrev[i]);
-		}
-
-		for (int i = 0; i < VEC_SIZE; ++i) {
-			fprintf(file, "%f\t", featuresPrev2[i]);
-		}
-		fprintf(file, "\n");
-		free(feature);
-		free(featuresPrev);
-		free(featuresPrev2);
+			for (int i = 0; i < VEC_SIZE; ++i) {
+				fprintf(file, "%f\t", featuresPrev2[i]);
+			}
+			fprintf(file, "\n");
+			free(feature);
+			free(featuresPrev);
+			free(featuresPrev2);
 	}
 }
 
+#define IMU_FRAME_LENGTH 100
+
+void parseIMUData(std::string str, int *a, int *b, int *c) {
+	int count = 0;
+	for (int i = 0; i < 3; ++i) {
+		while (str.at(count) != ',') {
+			count++;
+		}
+		count += 2;
+	}
+
+	char mynum[255];
+	int numlen = 0;
+	while (str.at(count) != ',') {
+		mynum[numlen] = str.at(count);
+		++numlen;
+		count++;
+	}
+	mynum[numlen] = 0;
+	*a = atoi(mynum);
+	count += 2;
+
+	numlen = 0;
+	while (str.at(count) != ',') {
+		mynum[numlen] = str.at(count);
+		++numlen;
+		count++;
+	}
+	mynum[numlen] = 0;
+	*b = atoi(mynum);
+	count += 2;
+
+	numlen = 0;
+	while (str.at(count) != ',') {
+		mynum[numlen] = str.at(count);
+		++numlen;
+		count++;
+	}
+	mynum[numlen] = 0;
+	*c = atoi(mynum);
+	count += 2;
+}
+
+double arrayMean(int *arr, int start, int end) {
+	double sum = 0;
+	for (int i = start; i <= end; ++i) {
+		sum += arr[i];
+	}
+	return sum / (double)(end - start + 1);
+}
+
+double arrayStd(int *arr, int start, int end, double mean) {
+	double sum = 0;
+	for (int i = start; i <= end; ++i) {
+		sum += abs((double)arr[i] - mean);
+	}
+	return sum / (double)(end - start + 1);
+}
+
+void arrayMinMax(int *arr, int start, int end, double *min, double *max) {
+	*max = (double)arr[0];
+	*min= (double)arr[0];
+
+	for (int i = start; i <= end; ++i) {
+		double value = (double)(arr[i]);
+		if (value > *max) {
+			*max = value;
+		}
+
+		if (value < *min) {
+			*min = value;
+		}
+	}
+}
+
+void extractFeatureFrom(int classlabel, int *gyrx, int *gyry, int *gyrz, int datalen, FILE *writeFile) {
+	for (int i = IMU_FRAME_LENGTH; i < datalen; ++i) {
+		int start = i - (IMU_FRAME_LENGTH - 1);
+		int end = i;
+
+		double gyrxmean = arrayMean(gyrx, start, end);
+		double gyrymean = arrayMean(gyry, start, end);
+		double gyrzmean = arrayMean(gyrz, start, end);
+
+		double gyrxstd = arrayStd(gyrx, start, end, gyrxmean);
+		double gyrystd = arrayStd(gyry, start, end, gyrymean);
+		double gyrzstd = arrayStd(gyrz, start, end, gyrzmean);
+
+		double gyrxmin = 0, gyrymin = 0, gyrzmin = 0;
+		double gyrxmax = 0, gyrymax = 0, gyrzmax = 0;
+
+		arrayMinMax(gyrx, start, end, &gyrxmin, &gyrxmax);
+		arrayMinMax(gyry, start, end, &gyrymin, &gyrymax);
+		arrayMinMax(gyrz, start, end, &gyrzmin, &gyrzmax);
+
+		fprintf(writeFile, "%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", classlabel, 
+			gyrxmean, gyrymean, gyrzmean, gyrxstd, gyrystd, gyrzstd, gyrxmin, gyrymin, gyrzmin, gyrxmax, gyrymax, gyrzmax);
+	}
+}
+
+void generateFeaturesForIMU(int classLabel, const char *readFile, int startInd, int endInd, FILE *writeFile) {
+	std::ifstream file;
+	file.open(readFile);
+	std::string line;
+	getline(file, line);
+	// skip first N lines: should be optimized
+	for (int ind = 1; ind < startInd; ++ind) {
+		getline(file, line);
+	}
+	// start getting frames
+	int datalen = endInd - (startInd - IMU_FRAME_LENGTH) + 1;
+	int *gyrx = new int[datalen];
+	int *gyry = new int[datalen];
+	int *gyrz = new int[datalen];
+
+	int count = 0;
+	int a = 0, b = 0, c = 0;
+	for (int ind = startInd - IMU_FRAME_LENGTH; ind <= endInd; ++ind) {
+		getline(file, line);
+		parseIMUData(line, &a, &b, &c);
+		gyrx[count] = a;
+		gyry[count] = b;
+		gyrz[count] = c;
+		++count;
+	}
+
+	extractFeatureFrom(classLabel, gyrx, gyry, gyrz, datalen, writeFile);
+
+	delete[] gyrx;
+	delete[] gyry;
+	delete[] gyrz;
+}
 int  parseName(std::string name);
 
 bool parseAnnotation(std::string annotation, int *classLabel, int *start, int *end) {
@@ -468,8 +619,38 @@ bool parseAnnotation(std::string annotation, int *classLabel, int *start, int *e
 #define STAIRSDOWN 5
 #define SLOPEUP 6
 #define SLOPEDOWN 7
-  
-void generateFeatures(std::string path) {
+
+void defineIMUFramePos(int depthStart, int imuStart, int startInd, int endInd, int *imuFrom, int *imuTo) {
+	double blah1 = 500.0 * (double)(startInd - depthStart) / 25.0;
+	double blah2 = 500.0 * (double)(endInd - depthStart) / 25.0;
+	blah1 += imuStart;
+	blah2 += imuStart;
+	*imuFrom += (int)round(blah1);
+	*imuTo += (int)round(blah2);
+
+}
+
+void parseIMU(std::string str, int *depthStart, int *imuStart) {
+	int count = 0;
+	int mynum = 0;
+	while (str.at(count) != ' ') {
+		mynum *= 10;
+		mynum += str.at(count) - '0';
+		++count;
+	}
+
+	*depthStart = mynum;
+	mynum = 0;
+	++count;
+	for (int i = count; i < str.length(); ++i) {
+		mynum *= 10;
+		mynum += str.at(i) - '0';
+	}
+
+	*imuStart = mynum;
+}
+
+void generateFeatures(std::string path, std::string imu) {
 
 	/* 
 	1: running
@@ -482,21 +663,34 @@ void generateFeatures(std::string path) {
 	*/
 	
 	const char *name = "features10-5_5-1";
+	const char *imuname = "imufeatures";
 	char buffer[3];
 	std::string annotation;
+	std::string imusettingsstr;
 	std::ifstream infile;
-	infile.open(path + "annotations.txt");
+	std::ifstream imuinfile;
+	infile.open(path + "ann.txt");
+	imuinfile.open(path + "imu.txt");
 	int a = 0;
 
 	FILE *file = NULL;
+	FILE *fileimu = NULL;
+
 	char *cstr = new char[path.length() + 1 + 12 + 10];
 	strcpy(cstr, path.c_str());
 	strcat(cstr, name); 
 	strcat(cstr, ".txt");
 	
-	file = fopen(cstr, "w");
+	char *imucstr = new char[path.length() + 1 + 12 + 10];
+	strcpy(imucstr, path.c_str());
+	strcat(imucstr, imuname);
+	strcat(imucstr, ".txt");
 
-	while (!infile.eof()) {
+	file = fopen(cstr, "w");
+	fileimu = fopen(imucstr, "w"); 
+
+	while (!imuinfile.eof()) {
+		/* depth
 		getline(infile, annotation);
 		if (annotation.empty()) {
 			continue;
@@ -504,11 +698,29 @@ void generateFeatures(std::string path) {
 		 
 		int classLabel = 0;
 		int startInd = 0, endInd = 0;
+		
 		parseAnnotation(annotation, &classLabel, &startInd, &endInd);
 		generateFeaturesFor(classLabel, path.c_str(), startInd, endInd, file);
+		*/
+
+		/* imu */
+		annotation = "";
+		getline(imuinfile, annotation);
+		if (annotation.empty()) {
+			continue;
+		}
+
+		int classLabel = 0;
+		int startInd = 0, endInd = 0;
+
+		parseAnnotation(annotation, &classLabel, &startInd, &endInd); 
+		generateFeaturesForIMU(classLabel, imu.c_str(), startInd, endInd, fileimu);
 	}
 	infile.close();
+	imuinfile.close();
 	printf("GENERATION DONE FOR: %s\n", path.c_str());
+	fclose(file);
+	fclose(fileimu);
 
 	delete[] cstr;
 } 
@@ -536,14 +748,14 @@ int parseName(std::string name) {
 	assert(false);
 }
 
-void generateForSubject(std::string line) {
+void generateForSubject(std::string line, std::string imufile) {
 	std::string path;
 	std::ifstream infile;
 	infile.open(line + "readme.txt");
 	int a = 0;
 	while (!infile.eof()) {
 		getline(infile, path);
-		generateFeatures(path);
+		generateFeatures(path, imufile);
 	}
 	infile.close();
 	printf("GENERATION DONE FOR: %s\n", line.c_str());
@@ -556,11 +768,14 @@ void processFile(char *name) {
 	int a = 0;
 	while (!infile.eof()) {
 		getline(infile, line);
-		generateForSubject(line);
+		///generateForSubject(line);
 	}
 	infile.close();
 	std::cout << "Processing done for " << name;
 }
-int main(int argc, char **argv) { 
-	processFile("Z:/Yerzhan/12people/paper_videos_data/depth/readme_first.txt");
+int main(int argc, char **argv) {
+	generateFeatures("Z:/Yerzhan/18people/yerzhan/day1/38/depthsense1/", "Z:/Yerzhan/18people/yerzhan/day1/38/imu/output1.txt");
+	generateFeatures("Z:/Yerzhan/18people/yerzhan/day1/38/depthsense2/", "Z:/Yerzhan/18people/yerzhan/day1/38/imu/output2.txt");
+	printf("done \n");
+	getchar();
 }

@@ -7,6 +7,9 @@
 #include <opencv2/core/core.hpp>
 #include <stdio.h>
 #include <iostream>
+#include <algorithm> 
+#include <functional>
+#include <cctype>
 #include <fstream>
 #include <string>
 #include <math.h>
@@ -87,34 +90,42 @@ void estimateFeaturesManual(int startH, int endH, int startW, int endW, int step
 	int midW = 0; 
 	double min = 0;
 	double max = 0;
-	if (!flagmaxminlist) {
-		flagmaxminlist = true;
-		for (int i = startH - 1; i < endH; ++i) {
-			for (int j = startW - 1; j < endW; ++j) {
-				double val = im.at<float>(i, j);
-				if (val > max) {
-					max = val;
-				}
-
-				if (val < min) {
-					min = val;
-				}
+	double sum = 0;
+	double sumsq = 0;
+	int counter = 0;
+	int stupidflag = 1;
+	for (int i = startH - 1; i < endH; ++i) {	
+		for (int j = startW - 1; j < endW; ++j) {
+			double val = im.at<float>(i, j);	
+			if (stupidflag == 1 || val > max) {
+				max = val;				
 			}
-		}
-
+			
+			if (stupidflag == 1 || val < min) {
+				min = val;				
+			} 			
+			sum += val;
+			counter++;
+			stupidflag = 0;
+		}		
 	}
-	
-	cv::Mat matsum = cv::Mat(sumIntegral, false);
-	cv::Mat matsquares = cv::Mat(squaresIntegral, false);
 
-	double count = 0;
-	double mean = matsum.at<double>(endH, endW) - matsum.at<double>(startH - 1, endW) - matsum.at<double>(endH, startW - 1) + matsum.at<double>(startH - 1, startW - 1);
-	mean /= (double)(endH - startH) * (endW - startW);
+	double mean = sum;
+	mean /= (double)(counter);
+	counter = 0;
+	for (int i = startH - 1; i < endH; ++i) {
+		for (int j = startW - 1; j < endW; ++j) {
+			double val = im.at<float>(i, j); 
+			sumsq += pow(val - mean, 2.0);
+			counter++;
+		}
+	}	 
 
-	double std = matsquares.at<double>(endH, endW) - matsquares.at<double>(startH - 1, endW) - matsquares.at<double>(endH, startW - 1) + matsquares.at<double>(startH - 1, startW - 1);
-	double divN = (double)(endH - startH) * (endW - startW);
-	std = pow((std / divN - mean * mean), 0.5);
-	count = 0;
+	double std = sqrt(sumsq / (double)counter); 
+
+	if (isnan(mean) || isnan(std) || isnan(max) || isnan(min)) { 
+		std::cout << "fucked up nan values" << std::endl;
+	}
 	 
 	answer[quad * 4 + 0] = min;
 	answer[quad * 4 + 1] = max;
@@ -260,8 +271,17 @@ IplImage *filterImage(IplImage *conf, IplImage *depth) {
 					sum += confVal;
 				}
 			}
-			val /= sum;
 
+			if (sum == 0) {
+				val = 0;
+			} else {
+				val /= sum;
+			}
+
+			int shit = 0;
+			if (isnan(val)) {
+				shit = 1;
+			}
 			float *ptr = (float *)(img->imageData + i * img->widthStep);
 			ptr[j] = val;
 		}
@@ -318,18 +338,18 @@ void generateFeaturesFor(int classLabel, const char *pathToFiles, int startInd, 
 		 
 			strcpy(nameDepth, pathToFiles);
 			strcpy(nameConf, pathToFiles);
-			strcat(nameDepth, "depth\\frame");
-			strcat(nameConf, "conf\\frame");
+			strcat(nameDepth, "depth\\depth");
+			strcat(nameConf, "conf\\conf");
 
 			strcpy(nameDepthPrev, pathToFiles);
 			strcpy(nameConfPrev, pathToFiles);
-			strcat(nameDepthPrev, "depth\\frame");
-			strcat(nameConfPrev, "conf\\frame");
+			strcat(nameDepthPrev, "depth\\depth");
+			strcat(nameConfPrev, "conf\\conf");
 			
 			strcpy(nameDepthPrev2, pathToFiles);
 			strcpy(nameConfPrev2, pathToFiles);
-			strcat(nameDepthPrev2, "depth\\frame");
-			strcat(nameConfPrev2, "conf\\frame");
+			strcat(nameDepthPrev2, "depth\\depth");
+			strcat(nameConfPrev2, "conf\\conf");
 
 			strcat(nameDepth, indexStr);
 			strcat(nameConf, indexStr);
@@ -663,34 +683,34 @@ void generateFeatures(std::string path, std::string imu) {
 	*/
 	
 	const char *name = "features10-5_5-1";
-	const char *imuname = "imufeatures";
+	//const char *imuname = "imufeatures";
 	char buffer[3];
 	std::string annotation;
-	std::string imusettingsstr;
+	//std::string imusettingsstr;
 	std::ifstream infile;
-	std::ifstream imuinfile;
+	//std::ifstream imuinfile;
 	infile.open(path + "ann.txt");
-	imuinfile.open(path + "imu.txt");
+	//imuinfile.open(path + "imu.txt");
 	int a = 0;
 
 	FILE *file = NULL;
-	FILE *fileimu = NULL;
+	//FILE *fileimu = NULL;
 
 	char *cstr = new char[path.length() + 1 + 12 + 10];
 	strcpy(cstr, path.c_str());
 	strcat(cstr, name); 
 	strcat(cstr, ".txt");
 	
-	char *imucstr = new char[path.length() + 1 + 12 + 10];
+	/*char *imucstr = new char[path.length() + 1 + 12 + 10];
 	strcpy(imucstr, path.c_str());
 	strcat(imucstr, imuname);
-	strcat(imucstr, ".txt");
+	strcat(imucstr, ".txt");*/
 
 	file = fopen(cstr, "w");
-	fileimu = fopen(imucstr, "w"); 
+	//fileimu = fopen(imucstr, "w"); 
 
-	while (!imuinfile.eof()) {
-		/* depth
+	while (!infile.eof()) {
+		// depth
 		getline(infile, annotation);
 		if (annotation.empty()) {
 			continue;
@@ -701,10 +721,10 @@ void generateFeatures(std::string path, std::string imu) {
 		
 		parseAnnotation(annotation, &classLabel, &startInd, &endInd);
 		generateFeaturesFor(classLabel, path.c_str(), startInd, endInd, file);
-		*/
+		
 
 		/* imu */
-		annotation = "";
+		/*annotation = "";
 		getline(imuinfile, annotation);
 		if (annotation.empty()) {
 			continue;
@@ -714,18 +734,20 @@ void generateFeatures(std::string path, std::string imu) {
 		int startInd = 0, endInd = 0;
 
 		parseAnnotation(annotation, &classLabel, &startInd, &endInd); 
-		generateFeaturesForIMU(classLabel, imu.c_str(), startInd, endInd, fileimu);
+		generateFeaturesForIMU(classLabel, imu.c_str(), startInd, endInd, fileimu);*/
 	}
 	infile.close();
-	imuinfile.close();
+	//imuinfile.close();
 	printf("GENERATION DONE FOR: %s\n", path.c_str());
 	fclose(file);
-	fclose(fileimu);
+	//fclose(fileimu);
 
 	delete[] cstr;
 } 
 
 int parseName(std::string name) {
+	std::transform(name.begin(), name.end(), name.begin(), std::ptr_fun<int, int>(std::toupper));
+
 	if (name.compare("WALK") == 0) {
 		return WALK;
 	}
@@ -774,8 +796,10 @@ void processFile(char *name) {
 	std::cout << "Processing done for " << name;
 }
 int main(int argc, char **argv) {
-	generateFeatures("Z:/Yerzhan/18people/yerzhan/day1/38/depthsense1/", "Z:/Yerzhan/18people/yerzhan/day1/38/imu/output1.txt");
-	generateFeatures("Z:/Yerzhan/18people/yerzhan/day1/38/depthsense2/", "Z:/Yerzhan/18people/yerzhan/day1/38/imu/output2.txt");
+	generateFeatures("Z:/Yerzhan/12people/review2/straight1/", ""); 
+	generateFeatures("Z:/Yerzhan/12people/review2/left1/", "");
+	generateFeatures("Z:/Yerzhan/12people/review2/left2/", ""); 
+	generateFeatures("Z:/Yerzhan/12people/review2/right1/", ""); 
 	printf("done \n");
 	getchar();
 }

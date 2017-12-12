@@ -11,7 +11,9 @@
 #include <functional>
 #include <cctype>
 #include <fstream>
+#include <sstream>
 #include <string>
+#include <iterator>
 #include <math.h>
 #include "Main.h"
 #include <time.h>
@@ -670,6 +672,41 @@ void parseIMU(std::string str, int *depthStart, int *imuStart) {
 	*imuStart = mynum;
 }
 
+void syncInfoRead(int *start, int *end, std::string path) {
+	std::ifstream file;
+	file.open(path + "sync.txt");
+	std::string value;
+	std::getline(file, value);
+
+	std::istringstream iss(value);
+
+	std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
+		std::istream_iterator<std::string>{} };
+
+	*start = atoi(tokens.at(0).c_str());
+	*end = atoi(tokens.at(1).c_str());
+}
+
+long *readTimeSeries(std::string path) { 
+	std::ifstream file;
+	file.open(path + "timeframes.txt");
+	std::vector<long> values;
+	long value = 0;
+	while (file >> value) {
+		values.push_back(value);
+	}
+	
+	long *result = new long[values.size()];
+	for (int i = 1; i < values.size(); ++i) {
+		result[i] = values.at(i) - values.at(i - 1);
+	}
+	result[0] = 0;
+	 
+	for (int i = 1; i < values.size(); ++i) {
+		result[i] += result[i - 1];
+	}
+	return result;
+}
 void generateFeatures(std::string path, std::string imu) {
 
 	/* 
@@ -683,31 +720,34 @@ void generateFeatures(std::string path, std::string imu) {
 	*/
 	
 	const char *name = "features10-5_5-1";
-	//const char *imuname = "imufeatures";
+	const char *imuname = "imufeatures";
 	char buffer[3];
 	std::string annotation;
-	//std::string imusettingsstr;
 	std::ifstream infile;
-	//std::ifstream imuinfile;
+	std::ifstream imuinfile;
+
+	int imustart = 0, depthstart = 0;
+	syncInfoRead(&imustart, &depthstart, path);
+	long *timeseries = readTimeSeries(path);
 	infile.open(path + "ann.txt");
-	//imuinfile.open(path + "imu.txt");
+	imuinfile.open(path + "imu.txt");
 	int a = 0;
 
 	FILE *file = NULL;
-	//FILE *fileimu = NULL;
+	FILE *fileimu = NULL;
 
 	char *cstr = new char[path.length() + 1 + 12 + 10];
 	strcpy(cstr, path.c_str());
 	strcat(cstr, name); 
 	strcat(cstr, ".txt");
 	
-	/*char *imucstr = new char[path.length() + 1 + 12 + 10];
+	char *imucstr = new char[path.length() + 1 + 12 + 10];
 	strcpy(imucstr, path.c_str());
 	strcat(imucstr, imuname);
-	strcat(imucstr, ".txt");*/
+	strcat(imucstr, ".txt");
 
 	file = fopen(cstr, "w");
-	//fileimu = fopen(imucstr, "w"); 
+	fileimu = fopen(imucstr, "w"); 
 
 	while (!infile.eof()) {
 		// depth
@@ -724,23 +764,18 @@ void generateFeatures(std::string path, std::string imu) {
 		
 
 		/* imu */
-		/*annotation = "";
-		getline(imuinfile, annotation);
-		if (annotation.empty()) {
-			continue;
-		}
-
-		int classLabel = 0;
-		int startInd = 0, endInd = 0;
-
-		parseAnnotation(annotation, &classLabel, &startInd, &endInd); 
-		generateFeaturesForIMU(classLabel, imu.c_str(), startInd, endInd, fileimu);*/
+		float deltaIMU = 525.0;
+		float depthTime1 = (float)((timeseries[startInd]	- timeseries[depthstart]) / 1000.0);
+		float depthTime2 = (float)((timeseries[endInd]		- timeseries[depthstart]) / 1000.0);
+		int imuStartInd	= depthTime1*deltaIMU + imustart;
+		int imuEndInd	= depthTime2*deltaIMU + imustart;
+		generateFeaturesForIMU(classLabel, imu.c_str(), imuStartInd, imuEndInd, fileimu);
 	}
 	infile.close();
-	//imuinfile.close();
+	imuinfile.close();
 	printf("GENERATION DONE FOR: %s\n", path.c_str());
 	fclose(file);
-	//fclose(fileimu);
+	fclose(fileimu);
 
 	delete[] cstr;
 } 
@@ -769,37 +804,10 @@ int parseName(std::string name) {
 
 	assert(false);
 }
-
-void generateForSubject(std::string line, std::string imufile) {
-	std::string path;
-	std::ifstream infile;
-	infile.open(line + "readme.txt");
-	int a = 0;
-	while (!infile.eof()) {
-		getline(infile, path);
-		generateFeatures(path, imufile);
-	}
-	infile.close();
-	printf("GENERATION DONE FOR: %s\n", line.c_str());
-}
-
-void processFile(char *name) {
-	std::string line;
-	std::ifstream infile;
-	infile.open(name);
-	int a = 0;
-	while (!infile.eof()) {
-		getline(infile, line);
-		///generateForSubject(line);
-	}
-	infile.close();
-	std::cout << "Processing done for " << name;
-}
+ 
 int main(int argc, char **argv) {
-	generateFeatures("Z:/Yerzhan/12people/review2/straight1/", ""); 
-	generateFeatures("Z:/Yerzhan/12people/review2/left1/", "");
-	generateFeatures("Z:/Yerzhan/12people/review2/left2/", ""); 
-	generateFeatures("Z:/Yerzhan/12people/review2/right1/", ""); 
-	printf("done \n");
+	printf("starting app\n");
+	generateFeatures("Z:/Yerzhan/18people/annotated/altay/day1/depthsense1/", "Z:/Yerzhan/18people/annotated/altay/day1/imu/output1.txt"); 
+	printf("all finished\n");
 	getchar();
 }

@@ -295,7 +295,7 @@ IplImage *filterImage(IplImage *conf, IplImage *depth) {
 	return img;
 }
 
-char *classNames[7] = {"run", "walk", "stand", "stairs up", "stairs down", "slope up", "slope down"};
+const char *classNames[7] = {"run", "walk", "stand", "stairs up", "stairs down", "slope up", "slope down"};
 
 void normalizeFeatures(double * feature) {
 	double featMin = feature[0];
@@ -321,6 +321,7 @@ int startFrom = 10;
 void generateFeaturesFor(int classLabel, const char *pathToFiles, int startInd, int endInd, FILE *file) {
 	  
 	for (int ind = startInd; ind <= endInd; ++ind) {
+		//printf("doing the frame number %d\n", ind);
 		char nameDepth[255];
 		char nameDepthPrev[255];
 		char nameConf[255];
@@ -442,42 +443,42 @@ void generateFeaturesFor(int classLabel, const char *pathToFiles, int startInd, 
 void parseIMUData(std::string str, int *a, int *b, int *c) {
 	int count = 0;
 	for (int i = 0; i < 3; ++i) {
-		while (str.at(count) != ',') {
+		while (str.at(count) != '\t') {
 			count++;
 		}
-		count += 2;
+		count += 1;
 	}
 
 	char mynum[255];
 	int numlen = 0;
-	while (str.at(count) != ',') {
+	while (str.at(count) != '\t') {
 		mynum[numlen] = str.at(count);
 		++numlen;
 		count++;
 	}
 	mynum[numlen] = 0;
 	*a = atoi(mynum);
-	count += 2;
+	count += 1;
 
 	numlen = 0;
-	while (str.at(count) != ',') {
+	while (str.at(count) != '\t') {
 		mynum[numlen] = str.at(count);
 		++numlen;
 		count++;
 	}
 	mynum[numlen] = 0;
 	*b = atoi(mynum);
-	count += 2;
+	count += 1;
 
 	numlen = 0;
-	while (str.at(count) != ',') {
+	while (str.at(count) != '\t') {
 		mynum[numlen] = str.at(count);
 		++numlen;
 		count++;
 	}
 	mynum[numlen] = 0;
 	*c = atoi(mynum);
-	count += 2;
+	count += 1;
 }
 
 double arrayMean(int *arr, int start, int end) {
@@ -687,16 +688,27 @@ void syncInfoRead(int *start, int *end, std::string path) {
 	*end = atoi(tokens.at(1).c_str());
 }
 
-long *readTimeSeries(std::string path) { 
+long long *readTimeSeries(std::string path) { 
 	std::ifstream file;
-	file.open(path + "timeframes.txt");
-	std::vector<long> values;
-	long value = 0;
-	while (file >> value) {
+	std::string fname = path + "timeframes.txt";
+	file.open(fname, std::ifstream::in);
+	if (file.fail()) {
+		printf("fail to open timeframes");
+	}
+	std::vector<long long> values;
+	long long value = 0;
+	std::string line;
+	
+	while (1 == 1) {
+		std::getline(file, line);
+		if (file.eof() || file.bad() || file.bad()) {
+			break;
+		}
+		value = atoll(line.c_str());
 		values.push_back(value);
 	}
 	
-	long *result = new long[values.size()];
+	long long *result = new long long[values.size()];
 	for (int i = 1; i < values.size(); ++i) {
 		result[i] = values.at(i) - values.at(i - 1);
 	}
@@ -727,8 +739,8 @@ void generateFeatures(std::string path, std::string imu) {
 	std::ifstream imuinfile;
 
 	int imustart = 0, depthstart = 0;
-	syncInfoRead(&imustart, &depthstart, path);
-	long *timeseries = readTimeSeries(path);
+	syncInfoRead(&depthstart, &imustart, path);
+	long long *timeseries = readTimeSeries(path);
 	infile.open(path + "ann.txt");
 	imuinfile.open(path + "imu.txt");
 	int a = 0;
@@ -807,7 +819,21 @@ int parseName(std::string name) {
  
 int main(int argc, char **argv) {
 	printf("starting app\n");
-	generateFeatures("Z:/Yerzhan/18people/annotated/altay/day1/depthsense1/", "Z:/Yerzhan/18people/annotated/altay/day1/imu/output1.txt"); 
+	char str[10];
+	for (int i = 2; i <= 13; ++i) {
+		if (i >= 4 && i <= 7) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/altay/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/altay/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
 	printf("all finished\n");
 	getchar();
 }

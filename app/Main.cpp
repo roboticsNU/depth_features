@@ -443,7 +443,7 @@ void generateFeaturesFor(int classLabel, const char *pathToFiles, int startInd, 
 void parseIMUData(std::string str, int *a, int *b, int *c) {
 	int count = 0;
 	for (int i = 0; i < 3; ++i) {
-		while (str.at(count) != '\t') {
+		while (str.at(count) != '\t' && str.at(count) != ',') {
 			count++;
 		}
 		count += 1;
@@ -451,7 +451,7 @@ void parseIMUData(std::string str, int *a, int *b, int *c) {
 
 	char mynum[255];
 	int numlen = 0;
-	while (str.at(count) != '\t') {
+	while (str.at(count) != '\t' && str.at(count) != ',') {
 		mynum[numlen] = str.at(count);
 		++numlen;
 		count++;
@@ -461,7 +461,7 @@ void parseIMUData(std::string str, int *a, int *b, int *c) {
 	count += 1;
 
 	numlen = 0;
-	while (str.at(count) != '\t') {
+	while (str.at(count) != '\t' && str.at(count) != ',') {
 		mynum[numlen] = str.at(count);
 		++numlen;
 		count++;
@@ -471,7 +471,7 @@ void parseIMUData(std::string str, int *a, int *b, int *c) {
 	count += 1;
 
 	numlen = 0;
-	while (str.at(count) != '\t') {
+	while (str.at(count) != '\t' && str.at(count) != ',') {
 		mynum[numlen] = str.at(count);
 		++numlen;
 		count++;
@@ -820,20 +820,292 @@ int parseName(std::string name) {
 int main(int argc, char **argv) {
 	printf("starting app\n");
 	char str[10];
-	for (int i = 2; i <= 13; ++i) {
-		if (i >= 4 && i <= 7) {
-			continue;
-		}
+	for (int i = 1; i <= 12; ++i) {
 		_itoa(i, str, 10);
-		std::string templ1 = "Z:/Yerzhan/18people/annotated/altay/day1/depthsense";
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/artemiy/day1/depthsense";
 		templ1 += str;
 		templ1 += "/";
 
-		std::string templ2 = "Z:/Yerzhan/18people/annotated/altay/day1/imu/output";
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/artemiy/day1/imu/output";
 		templ2 += str;
 		templ2 += ".txt";
 		generateFeatures(templ1, templ2);
 	}
+	printf("finished artemiy day 1");
+	for (int i = 1; i <= 12; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/artemiy/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/artemiy/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished artemiy day 2");
+
+
+	for (int i = 1; i <= 12; ++i) {
+		if (i == 5 || i == 6 || i == 8 || (i > 8 && i < 12)) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/beks/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/beks/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished beks day 1");
+	for (int i = 1; i <= 12; ++i) {
+		if (i == 2 || i == 3) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/beks/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/beks/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished beks day 2");
+
+
+	for (int i = 1; i <= 13; ++i) {
+		if (i == 9) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/birzhan/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/birzhan/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished birzhan day 1"); 
+	for (int i = 1; i <= 12; ++i) {
+		if (i == 4 || i == 5 || i == 10) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/birzhan/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/birzhan/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished birzhan day 2");
+
+
+	for (int i = 4; i <= 15; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/dana/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/dana/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished dana day 1");
+	for (int i = 3; i <= 14; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/dana/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/dana/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished dana day 2");
+
+	for (int i = 1; i <= 12; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/daulet/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/daulet/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished daulet day 1");
+	for (int i = 9; i <= 28; ++i) {
+		if (i > 18 && i < 27 || i == 16 || i == 17) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/daulet/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/daulet/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished daulet day 2");
+
+
+	for (int i = 6; i <= 18; ++i) {
+		if (i == 12) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/denis/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/denis/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished denis day 1");
+	for (int i = 2; i <= 12; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/denis/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/denis/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished denis day 2");
+
+
+	for (int i = 1; i <= 14; ++i) {
+		if (i == 2 || i == 4) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/marzhan/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/marzhan/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished marzhan day 1");
+	for (int i = 15; i <= 26; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/marzhan/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/marzhan/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished marzhan day 2");
+
+
+	for (int i = 1; i <= 12; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/shyngys/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/shyngys/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished shyngys day 1");
+	for (int i = 5; i <= 16; ++i) {
+		if (i == 12) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/shyngys/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/shyngys/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished shyngys day 2");
+
+	for (int i = 1; i <= 14; ++i) {
+		if (i == 4 || i == 5 || i == 7) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/sultanmurat/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/sultanmurat/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished sultanmurat day 1");
+	for (int i = 13; i <= 27; ++i) {
+		if (i == 19 || i == 20 || i == 21) {
+			continue;
+		}
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/sultanmurat/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/sultanmurat/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished sultanmurat day 2");
+
+
+	for (int i = 2; i <= 12; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/yerzhan_new/day1/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/yerzhan_new/day1/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished yerzhan_new day 1");
+	for (int i = 1; i <= 12; ++i) {
+		_itoa(i, str, 10);
+		std::string templ1 = "Z:/Yerzhan/18people/annotated/yerzhan_new/day2/depthsense";
+		templ1 += str;
+		templ1 += "/";
+
+		std::string templ2 = "Z:/Yerzhan/18people/annotated/yerzhan_new/day2/imu/output";
+		templ2 += str;
+		templ2 += ".txt";
+		generateFeatures(templ1, templ2);
+	}
+	printf("finished yerzhan_new day 2");
 	printf("all finished\n");
 	getchar();
 }

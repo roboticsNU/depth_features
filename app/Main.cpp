@@ -728,9 +728,36 @@ void estimateImuStartEnd(int *startInd, int *endInd, int shift, const char *read
 	for (int ind = 1; ind < shift; ++ind) {
 		getline(file, line);
 	}
+	float timelen = 0;
 	// start getting frames
+	int counter = shift;
+	int flag1 = 0, flag2 = 0;
 	while (true) {
 		getline(file, line);
+		std::size_t ind1 = line.find_last_of(',');
+		std::size_t ind2 = line.find_last_of('\t');
+		if (ind1 == std::string::npos) {
+			ind1 = ind2;
+		}
+
+		int ms2 = atoi(line.substr(ind1 + 1, std::string::npos).c_str());
+		float ms = (float)ms2 / 1000.0; // to ms
+		timelen += ms;
+		if (flag1 == 0 && timelen >= depthStartMs) {
+			*startInd = counter;
+			flag1 = 1;
+			if (flag2 == 1) {
+				break;
+			}
+		}
+		if (flag2 == 0 && timelen >= depthEndMs) {
+			*endInd = counter;
+			flag2 = 1;
+			if (flag1 == 1) {
+				break;
+			}
+		}
+		counter++;
 	}
 }
 void generateFeatures(std::string path, std::string imu) {
@@ -833,17 +860,120 @@ int parseName(std::string name) {
 }
  
 int main(int argc, char **argv) {
-	int type = 0;
+	/*int type = 0;
 	if (argc < 2) {
 		printf("number of parameters is not enough");
-		return -1;
+		type = 0;
 	}
 	type = atoi(argv[1]);
-	printf("starting app with parameter %d\n", type);
+	printf("starting app with parameter %d\n", type);*/
 	char str[10]; 
+	//if (type == 0) {
+		for (int i = 1; i <= 13; ++i) {
+			if (i >= 4 && i <= 7) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/altay/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
 
-	if (type == 1) { 
-		for (int i = 2; i <= 12; ++i) {
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/altay/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished altay day 1");
+		for (int i = 1; i <= 13; ++i) {
+			if (i == 3) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/altay/day2/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/altay/day2/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished altay day 2");
+
+		for (int i = 1; i <= 12; ++i) {
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/artemiy/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/artemiy/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished artemiy day 1");
+		for (int i = 1; i <= 12; ++i) {
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/artemiy/day2/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/artemiy/day2/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished artemiy day 2");
+
+
+		for (int i = 1; i <= 12; ++i) {
+			if (i == 5 || i == 6 || i == 8 || (i > 8 && i < 12)) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/beks/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/beks/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished beks day 1");
+		for (int i = 1; i <= 12; ++i) {
+			if (i == 2 || i == 3) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/beks/day2/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/beks/day2/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished beks day 2");
+	//} else if (type == 1) { 
+		for (int i = 1; i <= 13; ++i) {
+			if (i == 9) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/birzhan/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/birzhan/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished birzhan day 1");
+
+		for (int i = 1; i <= 12; ++i) {
 			if (i == 4 || i == 5 || i == 10) {
 				continue;
 			}
@@ -884,9 +1014,8 @@ int main(int argc, char **argv) {
 			generateFeatures(templ1, templ2);
 		}
 		printf("finished dana day 2");
-	}
-	else if (type == 2) {
-		for (int i = 8; i <= 18; ++i) {
+	//}	else if (type == 2) {
+		for (int i = 6; i <= 18; ++i) {
 			if (i == 12) {
 				continue;
 			}
@@ -913,8 +1042,23 @@ int main(int argc, char **argv) {
 			generateFeatures(templ1, templ2);
 		}
 		printf("finished denis day 2");
-	}
-	else if (type == 3) {
+	//}	else if (type == 3) {
+		for (int i = 1; i <= 14; ++i) {
+			_itoa(i, str, 10);
+			if (i == 2 || i == 4) {
+				continue;
+			}
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/marzhan/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/marzhan/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished marzhan day 1");
+
 		for (int i = 15; i <= 26; ++i) {
 			_itoa(i, str, 10);
 			std::string templ1 = "Z:/Yerzhan/18people/annotated/marzhan/day2/depthsense";
@@ -956,8 +1100,24 @@ int main(int argc, char **argv) {
 			generateFeatures(templ1, templ2);
 		}
 		printf("finished shyngys day 2");
-	} else if (type == 4) {
-		for (int i = 15; i <= 27; ++i) {
+	//} else if (type == 4) {
+		for (int i = 1; i <= 14; ++i) {
+			if (i == 4 || i == 5 || i == 7) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/sultanmurat/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/sultanmurat/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished sultanmurat day 1");
+
+		for (int i = 13; i <= 27; ++i) {
 			if (i == 19 || i == 20 || i == 21) {
 				continue;
 			}
@@ -998,7 +1158,36 @@ int main(int argc, char **argv) {
 			generateFeatures(templ1, templ2);
 		}
 		printf("finished yerzhan_new day 2");
-	}
+	//}	else if (type == 5) {
+		for (int i = 1; i <= 12; ++i) {
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/daulet/day1/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/daulet/day1/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished daulet day 1");
+
+		for (int i = 9; i <= 28; ++i) {
+			if (i >= 19 && i <= 26 || i == 16 || i == 17) {
+				continue;
+			}
+			_itoa(i, str, 10);
+			std::string templ1 = "Z:/Yerzhan/18people/annotated/daulet/day2/depthsense";
+			templ1 += str;
+			templ1 += "/";
+
+			std::string templ2 = "Z:/Yerzhan/18people/annotated/daulet/day2/imu/output";
+			templ2 += str;
+			templ2 += ".txt";
+			generateFeatures(templ1, templ2);
+		}
+		printf("finished daulet day 2");
+	//}
 	printf("all finished\n");
 	getchar();
 }

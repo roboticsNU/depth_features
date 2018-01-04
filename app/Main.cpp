@@ -719,6 +719,20 @@ long long *readTimeSeries(std::string path) {
 	}
 	return result;
 }
+void estimateImuStartEnd(int *startInd, int *endInd, int shift, const char *readFile, int depthStartMs, int depthEndMs) {
+	std::ifstream file;
+	file.open(readFile);
+	std::string line;
+	getline(file, line);
+	// skip first N lines: should be optimized
+	for (int ind = 1; ind < shift; ++ind) {
+		getline(file, line);
+	}
+	// start getting frames
+	while (true) {
+		getline(file, line);
+	}
+}
 void generateFeatures(std::string path, std::string imu) {
 
 	/* 
@@ -731,7 +745,7 @@ void generateFeatures(std::string path, std::string imu) {
 	7: slope down
 	*/
 	
-	const char *name = "features10-5_5-1";
+	//const char *name = "features10-5_5-1";
 	const char *imuname = "imufeatures";
 	char buffer[3];
 	std::string annotation;
@@ -745,20 +759,20 @@ void generateFeatures(std::string path, std::string imu) {
 	imuinfile.open(path + "imu.txt");
 	int a = 0;
 
-	FILE *file = NULL;
+	//FILE *file = NULL;
 	FILE *fileimu = NULL;
 
-	char *cstr = new char[path.length() + 1 + 12 + 10];
-	strcpy(cstr, path.c_str());
-	strcat(cstr, name); 
-	strcat(cstr, ".txt");
+	//char *cstr = new char[path.length() + 1 + 12 + 10];
+	//strcpy(cstr, path.c_str());
+	//strcat(cstr, name); 
+	//strcat(cstr, ".txt");
 	
 	char *imucstr = new char[path.length() + 1 + 12 + 10];
 	strcpy(imucstr, path.c_str());
 	strcat(imucstr, imuname);
 	strcat(imucstr, ".txt");
 
-	file = fopen(cstr, "w");
+	//file = fopen(cstr, "w");
 	fileimu = fopen(imucstr, "w"); 
 
 	while (!infile.eof()) {
@@ -772,24 +786,25 @@ void generateFeatures(std::string path, std::string imu) {
 		int startInd = 0, endInd = 0;
 		
 		parseAnnotation(annotation, &classLabel, &startInd, &endInd);
-		generateFeaturesFor(classLabel, path.c_str(), startInd, endInd, file);
+		//generateFeaturesFor(classLabel, path.c_str(), startInd, endInd, file);
 		
 
 		/* imu */
 		float deltaIMU = 525.0;
-		float depthTime1 = (float)((timeseries[startInd]	- timeseries[depthstart]) / 1000.0);
-		float depthTime2 = (float)((timeseries[endInd]		- timeseries[depthstart]) / 1000.0);
-		int imuStartInd	= depthTime1*deltaIMU + imustart;
-		int imuEndInd	= depthTime2*deltaIMU + imustart;
+		float depthTime1 = (float)((timeseries[startInd]	- timeseries[depthstart]));
+		float depthTime2 = (float)((timeseries[endInd]		- timeseries[depthstart]));
+		int imuStartInd = 0; // depthTime1*deltaIMU + imustart;
+		int imuEndInd = 0;   // depthTime2*deltaIMU + imustart;
+		estimateImuStartEnd(&imuStartInd, &imuEndInd, imustart, imu.c_str(), depthTime1, depthTime2);
 		generateFeaturesForIMU(classLabel, imu.c_str(), imuStartInd, imuEndInd, fileimu);
 	}
 	infile.close();
 	imuinfile.close();
 	printf("GENERATION DONE FOR: %s\n", path.c_str());
-	fclose(file);
+	//fclose(file);
 	fclose(fileimu);
 
-	delete[] cstr;
+	//delete[] cstr;
 } 
 
 int parseName(std::string name) {
@@ -825,81 +840,10 @@ int main(int argc, char **argv) {
 	}
 	type = atoi(argv[1]);
 	printf("starting app with parameter %d\n", type);
-	char str[10];
-	/*for (int i = 1; i <= 12; ++i) {
-		_itoa(i, str, 10);
-		std::string templ1 = "Z:/Yerzhan/18people/annotated/artemiy/day1/depthsense";
-		templ1 += str;
-		templ1 += "/";
+	char str[10]; 
 
-		std::string templ2 = "Z:/Yerzhan/18people/annotated/artemiy/day1/imu/output";
-		templ2 += str;
-		templ2 += ".txt";
-		generateFeatures(templ1, templ2);
-	}
-	printf("finished artemiy day 1");
-	for (int i = 1; i <= 12; ++i) {
-		_itoa(i, str, 10);
-		std::string templ1 = "Z:/Yerzhan/18people/annotated/artemiy/day2/depthsense";
-		templ1 += str;
-		templ1 += "/";
-
-		std::string templ2 = "Z:/Yerzhan/18people/annotated/artemiy/day2/imu/output";
-		templ2 += str;
-		templ2 += ".txt";
-		generateFeatures(templ1, templ2);
-	}
-	printf("finished artemiy day 2");
-
-
-	for (int i = 1; i <= 12; ++i) {
-		if (i == 5 || i == 6 || i == 8 || (i > 8 && i < 12)) {
-			continue;
-		}
-		_itoa(i, str, 10);
-		std::string templ1 = "Z:/Yerzhan/18people/annotated/beks/day1/depthsense";
-		templ1 += str;
-		templ1 += "/";
-
-		std::string templ2 = "Z:/Yerzhan/18people/annotated/beks/day1/imu/output";
-		templ2 += str;
-		templ2 += ".txt";
-		generateFeatures(templ1, templ2);
-	}
-	printf("finished beks day 1");
-	for (int i = 1; i <= 12; ++i) {
-		if (i == 2 || i == 3) {
-			continue;
-		}
-		_itoa(i, str, 10);
-		std::string templ1 = "Z:/Yerzhan/18people/annotated/beks/day2/depthsense";
-		templ1 += str;
-		templ1 += "/";
-
-		std::string templ2 = "Z:/Yerzhan/18people/annotated/beks/day2/imu/output";
-		templ2 += str;
-		templ2 += ".txt";
-		generateFeatures(templ1, templ2);
-	}
-	printf("finished beks day 2");*/
-
-	if (type == 1) {
-		for (int i = 1; i <= 13; ++i) {
-			if (i == 9) {
-				continue;
-			}
-			_itoa(i, str, 10);
-			std::string templ1 = "Z:/Yerzhan/18people/annotated/birzhan/day1/depthsense";
-			templ1 += str;
-			templ1 += "/";
-
-			std::string templ2 = "Z:/Yerzhan/18people/annotated/birzhan/day1/imu/output";
-			templ2 += str;
-			templ2 += ".txt";
-			generateFeatures(templ1, templ2);
-		}
-		printf("finished birzhan day 1");
-		for (int i = 1; i <= 12; ++i) {
+	if (type == 1) { 
+		for (int i = 2; i <= 12; ++i) {
 			if (i == 4 || i == 5 || i == 10) {
 				continue;
 			}
@@ -942,36 +886,7 @@ int main(int argc, char **argv) {
 		printf("finished dana day 2");
 	}
 	else if (type == 2) {
-		for (int i = 1; i <= 12; ++i) {
-			_itoa(i, str, 10);
-			std::string templ1 = "Z:/Yerzhan/18people/annotated/daulet/day1/depthsense";
-			templ1 += str;
-			templ1 += "/";
-
-			std::string templ2 = "Z:/Yerzhan/18people/annotated/daulet/day1/imu/output";
-			templ2 += str;
-			templ2 += ".txt";
-			generateFeatures(templ1, templ2);
-		}
-		printf("finished daulet day 1");
-		for (int i = 9; i <= 28; ++i) {
-			if (i > 18 && i < 27 || i == 16 || i == 17) {
-				continue;
-			}
-			_itoa(i, str, 10);
-			std::string templ1 = "Z:/Yerzhan/18people/annotated/daulet/day2/depthsense";
-			templ1 += str;
-			templ1 += "/";
-
-			std::string templ2 = "Z:/Yerzhan/18people/annotated/daulet/day2/imu/output";
-			templ2 += str;
-			templ2 += ".txt";
-			generateFeatures(templ1, templ2);
-		}
-		printf("finished daulet day 2");
-
-
-		for (int i = 6; i <= 18; ++i) {
+		for (int i = 8; i <= 18; ++i) {
 			if (i == 12) {
 				continue;
 			}
@@ -1000,22 +915,6 @@ int main(int argc, char **argv) {
 		printf("finished denis day 2");
 	}
 	else if (type == 3) {
-		/*
-		for (int i = 1; i <= 14; ++i) {
-			if (i == 2 || i == 4) {
-				continue;
-			}
-			_itoa(i, str, 10);
-			std::string templ1 = "Z:/Yerzhan/18people/annotated/marzhan/day1/depthsense";
-			templ1 += str;
-			templ1 += "/";
-
-			std::string templ2 = "Z:/Yerzhan/18people/annotated/marzhan/day1/imu/output";
-			templ2 += str;
-			templ2 += ".txt";
-			generateFeatures(templ1, templ2);
-		}
-		printf("finished marzhan day 1");*/
 		for (int i = 15; i <= 26; ++i) {
 			_itoa(i, str, 10);
 			std::string templ1 = "Z:/Yerzhan/18people/annotated/marzhan/day2/depthsense";
@@ -1058,22 +957,6 @@ int main(int argc, char **argv) {
 		}
 		printf("finished shyngys day 2");
 	} else if (type == 4) {
-
-		/*for (int i = 1; i <= 14; ++i) {
-			if (i == 4 || i == 5 || i == 7) {
-				continue;
-			}
-			_itoa(i, str, 10);
-			std::string templ1 = "Z:/Yerzhan/18people/annotated/sultanmurat/day1/depthsense";
-			templ1 += str;
-			templ1 += "/";
-
-			std::string templ2 = "Z:/Yerzhan/18people/annotated/sultanmurat/day1/imu/output";
-			templ2 += str;
-			templ2 += ".txt";
-			generateFeatures(templ1, templ2);
-		}
-		printf("finished sultanmurat day 1");*/
 		for (int i = 15; i <= 27; ++i) {
 			if (i == 19 || i == 20 || i == 21) {
 				continue;
